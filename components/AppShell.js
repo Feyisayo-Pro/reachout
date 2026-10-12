@@ -29,6 +29,7 @@ export default function AppShell({ children }) {
           <span className="mr-3 text-lg font-semibold">ReachOut</span>
           {tab('/dashboard', 'Outreach')}
           {tab('/profile', 'Profile')}
+          {tab('/settings', 'Settings')}
         </nav>
         <button onClick={() => signOut(auth).then(() => router.replace('/login'))}
                 className="text-sm text-gray-500 hover:text-gray-800">Log out</button>

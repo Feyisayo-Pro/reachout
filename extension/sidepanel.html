@@ -87,25 +87,24 @@
         <button class="ghost" id="copy">Copy</button>
         <button class="ghost" id="regen">Regenerate</button>
       </div>
-      <div class="hint">Read it before you send. Never send a draft you haven't checked.</div>
+      <div class="hint" id="savedNote">Read it before you send. Never send a draft you haven't checked.</div>
     </div>
   </div>
 
   <details id="settings">
-    <summary>Settings — your profile &amp; API token</summary>
+    <summary>Connection</summary>
 
-    <label for="token">ReachOut API token</label>
-    <input id="token" type="password" placeholder="rо_..." />
+    <div class="hint" id="acct" style="margin-top:8px"></div>
 
-    <label for="apiBase">API base URL</label>
-    <input id="apiBase" type="text" placeholder="https://your-deployment.vercel.app" />
+    <label for="apiBase">ReachOut URL</label>
+    <input id="apiBase" type="text" placeholder="https://your-reachout.vercel.app" />
 
-    <label for="background">Your background (used to tailor every message)</label>
-    <textarea id="background" rows="7" placeholder="Paste your CV text or a summary: experience, key skills, notable projects..."></textarea>
-    <div class="hint">Stored locally in this browser only. Nothing is invented from it.</div>
+    <label for="token">Device key</label>
+    <input id="token" type="password" placeholder="ro_..." />
+    <div class="hint">Create one in ReachOut under Settings. Your CV and history live in your account, not here.</div>
 
-    <button id="save">Save settings</button>
-    <div class="hint hidden" id="saved">Saved.</div>
+    <button id="save">Save &amp; check connection</button>
+    <div class="hint hidden" id="saved"></div>
   </details>
 
   <script src="sidepanel.js"></script>

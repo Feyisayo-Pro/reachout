@@ -81,9 +81,12 @@ users/{uid}/outreach/{id}
   sentAt               timestamp | null
   notes                string
 
-users/{uid}/deviceKeys/{id}
+deviceKeys/{sha256(key)}          // TOP-LEVEL; the document ID is the hash, so the
+                                  // draft endpoint resolves a key with one direct get
+                                  // (no collection-group index needed). Client access
+                                  // is denied entirely; the Admin SDK bypasses rules.
+  uid              string
   label            string      // "Chrome on MacBook"
-  keyHash          string      // sha256. The raw key is shown once and never stored.
   createdAt        timestamp
   lastUsedAt       timestamp
   revokedAt        timestamp | null
