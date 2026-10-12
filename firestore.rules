@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Default-deny. A signed-in user can only ever touch their own subtree.
+// Device keys are written and read ONLY by the server (Admin SDK bypasses
+// rules), so the client is denied entirely: a leaked browser session can
+// never mint or list extension keys.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['email', 'displayName', 'createdAt']);
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName']);
+      allow delete: if false;
+
+      // Profile: the CV text that grounds every draft.
+      match /profile/{doc} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(
+               ['fullName', 'headline', 'cvText', 'cvFileName', 'cvUpdatedAt',
+                'targetRoles', 'location', 'workAuth'])
+          && request.resource.data.cvText is string
+          && request.resource.data.cvText.size() <= 60000
+          && request.resource.data.fullName.size() <= 200
+          && request.resource.data.headline.size() <= 300
+          && request.resource.data.workAuth.size() <= 300;
+        allow delete: if isOwner(uid);
+      }
+
+      // Outreach history. Rows are CREATED by the server when a draft is made;
+      // the owner may read, delete, and edit only status/notes/sentAt.
+      match /outreach/{id} {
+        allow read, delete: if isOwner(uid);
+        allow create: if false;
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'notes', 'sentAt'])
+          && request.resource.data.status in
+               ['drafted', 'sent', 'replied', 'no_response', 'rejected']
+          && request.resource.data.notes.size() <= 2000;
+      }
+
+      // Extension device keys: server-only.
+      match /deviceKeys/{id} {
+        allow read, write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
