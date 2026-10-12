@@ -1,0 +1,13 @@
+{
+  "name": "reachout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drafts tailored LinkedIn outreach messages to recruiters, grounded in your real background. You review and send every message yourself.",
+  "type": "module",
+  "scripts": {
+    "token": "node scripts/make-token.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0"
+  }
+}
