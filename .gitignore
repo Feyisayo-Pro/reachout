@@ -8,3 +8,8 @@ node_modules/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+
+# Firebase / Google service-account keys are permanent admin credentials.
+*-firebase-adminsdk-*.json
+*serviceAccount*.json
+*service-account*.json
