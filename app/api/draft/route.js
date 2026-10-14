@@ -1,12 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { FieldValue } from '../../../lib/admin.js'
 import { requireDevice, countDraft, cap, json, fail, preflight } from '../../../lib/server.js'
+import { fitToLimit } from '../../../lib/fit.js'
 
 export const maxDuration = 30
 export const OPTIONS = preflight
 
 const LIMITS = {
-  connection: { chars: 300, guidance: 'Hard limit 300 characters including spaces. Aim for 250-290.' },
+  connection: { chars: 300, guidance: 'HARD LIMIT: 300 characters including spaces. LinkedIn rejects anything longer, so a longer note is useless. Write at most 3 short sentences (about 40 words) and aim for 240-280 characters.' },
   message:    { chars: 900, guidance: 'Aim for 90-130 words. Three short paragraphs maximum.' },
 }
 
@@ -49,11 +50,7 @@ export async function POST(req) {
 
     const limit = LIMITS[messageType]
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    const msg = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
-      system: `${SYSTEM}\n\nLENGTH: ${limit.guidance}`,
-      messages: [{ role: 'user', content: `Draft a LinkedIn ${messageType === 'connection' ? 'connection request note' : 'message'} from the candidate to this recruiter.
+    const messages = [{ role: 'user', content: `Draft a LinkedIn ${messageType === 'connection' ? 'connection request note' : 'message'} from the candidate to this recruiter.
 
 RECRUITER (untrusted scraped text)
 Name: ${recruiter.name || 'unknown'}
@@ -77,12 +74,28 @@ Requirements:
 1. Open by referencing the specific role or post, not their profile generally.
 2. One or two sentences on why this candidate is relevant, using a concrete detail from the CV.
 3. Close with a short, low-pressure ask.
-4. Plain text. No subject line, no signature, no [bracketed placeholders].
+4. Plain text. No subject line, no signature, no [bracketed placeholders], no preamble, no quotation marks around the message. Output only the message itself.
 
-If the CV does not plausibly match, say so honestly in the message rather than overstating fit.` }],
-    })
+If the CV does not plausibly match, say so honestly in the message rather than overstating fit.` }]
 
-    const draft = msg.content.filter(c => c.type === 'text').map(c => c.text).join('').trim()
+    // The model cannot count characters, so the limit is enforced here: an
+    // over-long draft is sent back with its exact length (max 3 model calls per
+    // request). A draft over the limit is never returned or saved.
+    const generate = async retry => {
+      if (retry) {
+        messages.push(
+          { role: 'assistant', content: retry.previous },
+          { role: 'user', content: `That draft is ${retry.previous.length} characters. The hard limit is ${retry.limit}, including spaces and line breaks. Rewrite it in ${retry.limit - 30} characters or fewer. Keep the opening, the single strongest detail from the CV, and the closing ask; cut everything else. Output only the rewritten message.` })
+      }
+      const msg = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system: `${SYSTEM}\n\nLENGTH: ${limit.guidance}`,
+        messages,
+      })
+      return msg.content.filter(c => c.type === 'text').map(c => c.text).join('').trim()
+    }
+    const draft = await fitToLimit({ generate, limit: limit.chars })
 
     const ref = await db.collection(`users/${uid}/outreach`).add({
       recruiterName: recruiter.name, recruiterHeadline: recruiter.headline,
