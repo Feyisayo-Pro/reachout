@@ -33,14 +33,15 @@ Firebase over Supabase because Supabase's free tier pauses projects after about 
 ## State
 
 - **Phase 1** (accounts, profile, CV upload and parse, save): built and **confirmed working by the user** against real Firebase.
-- **Phase 2** (device keys, `/api/draft`, `/api/me`, `/api/keys`, outreach dashboard, Settings page, thin extension): code complete, pushed in `0395af8`, `npm run build` passes. **Never run end to end.** It needs the Firebase service account on the server first.
-- **Deployed:** the live URL still serves the *old* API-only version (before accounts). Phase 2 has not been deployed. Vercel production env has `NEXT_PUBLIC_FIREBASE_*`, `FIREBASE_PROJECT_ID` and `ANTHROPIC_API_KEY`. **Missing: `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY`.**
+- **Phase 2** (device keys, `/api/draft`, `/api/me`, `/api/keys`, outreach dashboard, Settings page, thin extension): code complete, **deployed to production on 2026-10-14**. Verified on the live URL: unauthenticated and bad-key calls return clean 401s, a fake `ro_` key triggers a real Firestore read with the production service account, a garbage ID token is rejected by `firebase-admin/auth`, CORS allows only `chrome-extension://`. **Not yet run end to end by a signed-in user** (create key, extension, real draft).
+- **Deployed:** production serves Phase 2. Vercel production env has `NEXT_PUBLIC_FIREBASE_*`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` and `ANTHROPIC_API_KEY`. The service-account JSON has been loaded and deleted from disk (regenerate one in the Firebase console if it is ever needed again).
+- **Platform constraint (caused the first prod 500s):** Vercel starts Next.js functions with `--no-experimental-require-module`, so `require()` of an ESM-only package fails. `firebase-admin@14` pulls `jwks-rsa@4`, which requires `jose@6` (ESM-only), and every API route died at module load with `ERR_REQUIRE_ESM`. `package.json` therefore has `"overrides": {"jwks-rsa": "3.2.2"}` (jose 4, has a CJS build). `jwks-rsa` is only used by `firebase-admin` for App Check, not ID-token verification. Remove the override once `firebase-admin` or Vercel no longer needs it, and re-test on a preview. To reproduce locally: `node --no-experimental-require-module node_modules/next/dist/bin/next start`.
 - **Tests:** there is no test suite. Key generation, hashing, CORS allow/deny cases and error non-leakage were checked with a throwaway script that was not saved. Adding a real `node:test` suite for `lib/server.js` is worthwhile.
 
 ## Next steps, in order
 
-1. The user has downloaded the service account key into the **project root** (`reachout-5720c-firebase-adminsdk-fbsvc-*.json`, gitignored). Load it with `./scripts/push-service-account.sh <path to that file>`. It pipes the values to Vercel and `.env.local` without printing them. Then **delete the JSON**; it is a permanent admin credential for the whole Firebase project. Never read it, print it, or paste it anywhere.
-2. `vercel deploy --prod`.
+1. ~~Load the service account key~~ Done 2026-10-14 (script: `./scripts/push-service-account.sh <json>`; it pipes values to Vercel and `.env.local` without printing them, then delete the JSON, which is a permanent admin credential).
+2. ~~`vercel deploy --prod`~~ Done 2026-10-14. Use a preview deploy plus `vercel curl` to test changes first. `vercel curl` creates a Deployment Protection bypass token on the project; revoke it afterwards (Project Settings, Deployment Protection).
 3. Reload the extension at `chrome://extensions`, then test the whole loop: site Settings, create a key, paste URL and key into the extension, "Save & check connection", draft on a recruiter's profile, confirm the row appears under Outreach.
 4. **Rotate the Anthropic key.** A key was pasted into a chat on 2026-10-12 and must be treated as burned. Confirm the one in Vercel is a Console `sk-ant-api03-` key with billing credit.
 5. Then roadmap items below.

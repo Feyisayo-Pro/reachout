@@ -19,6 +19,9 @@
     "react-dom": "^19.3.0"
   },
   "type": "module",
+  "overrides": {
+    "jwks-rsa": "3.2.2"
+  },
   "devDependencies": {
     "autoprefixer": "^10.6.1",
     "postcss": "^8.5.29",
