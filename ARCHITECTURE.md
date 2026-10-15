@@ -1,6 +1,6 @@
 # ReachOut — Architecture Plan
 
-Status: **proposal, not built.** For review before any code is written.
+Status: **Phases 1 to 3 are built and in production** (accounts and profile, device keys and drafting, outreach dashboard with status editing). Phase 4 (notes editing, follow-up reminders) is not built. This file is the original pre-build design; where it differs from the code, `CLAUDE.md` and the code are authoritative.
 
 ## What ReachOut is
 
